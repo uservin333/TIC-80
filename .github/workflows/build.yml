@@ -79,6 +79,15 @@ jobs:
           cd build
           cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DBUILD_PRO=On -DBUILD_WITH_ALL=ON ..
           cmake --build . --config Release --parallel
+      - name: Deploy Pro
+        uses: actions/upload-artifact@v6
+        with:
+          if-no-files-found: error
+          name: "tic80-windows-pro"
+          path: |
+            build/bin/tic80.exe
+
+      - name: Deploy Export Stub
 
       # The universal stub: every free export asks for /export/<ver>/<system>,
       # with no language suffix. It keeps its editors, as it did in 1.1 — a
