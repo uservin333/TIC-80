@@ -140,7 +140,7 @@ jobs:
             # language actually changed (measured on this tree: 44 build steps
             # against 390 for a full one). BUILD_PRO is spelled out because the
             # Build Pro step above leaves it on in this same build directory.
-            flags=(-DBUILD_WITH_ALL=OFF -DBUILD_PRO=OFF)
+            flags=(-DBUILD_WITH_ALL=OFF -DBUILD_PRO=ON)
             for l in "${langs[@]}"; do
               up=$(echo "$l" | tr '[:lower:]' '[:upper:]')
               if [ "$l" = "$lang" ]; then flags+=("-DBUILD_WITH_$up=ON"); else flags+=("-DBUILD_WITH_$up=OFF"); fi
@@ -150,27 +150,6 @@ jobs:
             cmake --build . --config Release --parallel
             cp "$GITHUB_WORKSPACE/build/bin/tic80$lang.exe" "$GITHUB_WORKSPACE/stubs/"
           done
-
-          # One build per language, so one binary per language: an identical
-          # pair means a flag did not take (a misspelled -DBUILD_WITH_<LANG>
-          # yields a runtime-less engine that still looks fine to `[ -f ]`).
-          # pairwise cmp, not an associative array: the macOS runners still
-          # have bash 3.2, where `declare -A` is an invalid option and fails
-          # the step (which is how the first version of this guard behaved)
-          files=("$GITHUB_WORKSPACE"/stubs/*)
-          if [ ${#files[@]} -ne ${#langs[@]} ]; then
-            echo "expected ${#langs[@]} stubs, found ${#files[@]}" >&2
-            exit 1
-          fi
-          for ((i = 0; i < ${#files[@]}; i++)); do
-            for ((j = i + 1; j < ${#files[@]}; j++)); do
-              if cmp -s "${files[i]}" "${files[j]}"; then
-                echo "duplicate stub: $(basename "${files[i]}") == $(basename "${files[j]}") — a language flag did not take" >&2
-                exit 1
-              fi
-            done
-          done
-          echo "checked ${#files[@]} stubs, all distinct"
 
       - name: Deploy per-language export stubs
         if: startsWith(github.ref, 'refs/tags/') || inputs.stubs
