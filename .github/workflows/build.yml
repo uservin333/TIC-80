@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-    # === Windows ===
+  # === Windows ===
   windows:
     runs-on: windows-2022
 
@@ -88,13 +88,6 @@ jobs:
           path: |
             build/bin/tic80.exe
 
-      # The universal stub: every free export asks for /export/<ver>/<system>,
-      # with no language suffix. It keeps its editors, as it did in 1.1 — a
-      # free export hands out the player, and it is `alone` (the per-language
-      # stubs below) that strips the IDE.
-      # No build here: the universal stub is the binary the Build step kept
-      # aside — the same configuration, and building it again was a full engine
-      # build for a byte-identical result.
       - name: Deploy Export Stub
         uses: actions/upload-artifact@v6
         with:
@@ -103,62 +96,6 @@ jobs:
           path: |
             stub/tic80.exe
 
-
-      # The universal stub: every free export asks for /export/<ver>/<system>,
-      # with no language suffix. It keeps its editors, as it did in 1.1 — a
-      # free export hands out the player, and it is `alone` (the per-language
-      # stubs below) that strips the IDE.
-      # No build here: the universal stub is the binary the Build step kept
-      # aside — the same configuration, and building it again was a full engine
-      # build for a byte-identical result.
-      - name: Deploy Export Stub
-        uses: actions/upload-artifact@v6
-        with:
-          if-no-files-found: error
-          name: "tic80-windows-export"
-          path: |
-            stub/tic80.exe
-
-      # The per-language stubs a PRO alone export asks for
-      # (/export/<ver>/<system><lang>, console.c exportGame): one binary per
-      # language, each carrying only that runtime — about a third of the
-      # universal stub's size. This is a full engine build per language, so
-      # it runs on the release path only (a tag, or a manual dispatch with
-      # `stubs`) and never on a pull request.
-      - name: Build per-language export stubs
-        if: startsWith(github.ref, 'refs/tags/') || inputs.stubs
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$GITHUB_WORKSPACE/stubs"
-          langs=(lua ruby js moon yue fennel scheme squirrel wren wasm janet python miniscript forth gravity)
-          for lang in "${langs[@]}"; do
-            # Every language flag on every pass, so nothing can stick in the
-            # cache from the previous one — which is what the --fresh here used
-            # to buy, at the price of throwing SDL2 and the whole engine away
-            # fifteen times over. Without it a pass rebuilds only what its
-            # language actually changed (measured on this tree: 44 build steps
-            # against 390 for a full one). BUILD_PRO is spelled out because the
-            # Build Pro step above leaves it on in this same build directory.
-            flags=(-DBUILD_WITH_ALL=OFF -DBUILD_PRO=ON)
-            for l in "${langs[@]}"; do
-              up=$(echo "$l" | tr '[:lower:]' '[:upper:]')
-              if [ "$l" = "$lang" ]; then flags+=("-DBUILD_WITH_$up=ON"); else flags+=("-DBUILD_WITH_$up=OFF"); fi
-            done
-            cd "$GITHUB_WORKSPACE/build"
-            cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DBUILD_EDITORS=OFF -DBUILD_SURF=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 "${flags[@]}" -DTIC80_TARGET="tic80$lang" ..
-            cmake --build . --config Release --parallel
-            cp "$GITHUB_WORKSPACE/build/bin/tic80$lang.exe" "$GITHUB_WORKSPACE/stubs/"
-          done
-
-      - name: Deploy per-language export stubs
-        if: startsWith(github.ref, 'refs/tags/') || inputs.stubs
-        uses: actions/upload-artifact@v6
-        with:
-          if-no-files-found: error
-          name: "tic80-windows-export-langs"
-          path: |
-            stubs/*
 
   # === Ubuntu 22.04 (gcc-12, glibc 2.35) ===
   linux:
