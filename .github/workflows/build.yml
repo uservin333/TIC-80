@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # === Windows ===
+    # === Windows ===
   windows:
     runs-on: windows-2022
 
@@ -79,6 +79,7 @@ jobs:
           cd build
           cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DBUILD_PRO=On -DBUILD_WITH_ALL=ON ..
           cmake --build . --config Release --parallel
+
       - name: Deploy Pro
         uses: actions/upload-artifact@v6
         with:
@@ -87,7 +88,21 @@ jobs:
           path: |
             build/bin/tic80.exe
 
+      # The universal stub: every free export asks for /export/<ver>/<system>,
+      # with no language suffix. It keeps its editors, as it did in 1.1 — a
+      # free export hands out the player, and it is `alone` (the per-language
+      # stubs below) that strips the IDE.
+      # No build here: the universal stub is the binary the Build step kept
+      # aside — the same configuration, and building it again was a full engine
+      # build for a byte-identical result.
       - name: Deploy Export Stub
+        uses: actions/upload-artifact@v6
+        with:
+          if-no-files-found: error
+          name: "tic80-windows-export"
+          path: |
+            stub/tic80.exe
+
 
       # The universal stub: every free export asks for /export/<ver>/<system>,
       # with no language suffix. It keeps its editors, as it did in 1.1 — a
